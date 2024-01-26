@@ -1,0 +1,145 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "FunctionAppName": {
+            "type": "string"
+        },
+        "VNETResourceGroupName": {
+            "type": "string"
+        },
+        "VNET2ResourceGroupName": {
+            "type": "string"
+        },
+        "VNETWeuResourceGroupName": {
+            "type": "string"
+        },
+        "FunctionAppVNETname": {
+            "type": "string"
+        },
+        "FunctionAppSubnetName": {
+            "type": "string"
+        },
+		"VNETname":  {
+			"type": "string"
+		},
+		"APIMInternalSubnetName": {
+			"type": "string"
+		},
+		"SupportVMSubnetName": {
+			"type": "string"
+		},
+		"APIMInternal2VNETname": {
+			"type": "string"
+		},
+		"APIMInternal2SubnetName": {
+			"type": "string"
+		},
+        "EnvironmentName": {
+            "type": "string"
+        },
+        "TagApplicationName": {
+            "type": "string"
+        },
+        "TagCostCenter": {
+            "type": "string"
+        },
+        "TagOwner": {
+            "type": "string"
+        },
+        "TagSupportedby": {
+            "type": "string"
+        }
+
+
+    },
+    "resources": [
+		{
+			"type": "Microsoft.Web/sites/config",
+            "apiVersion": "2022-03-01",
+            "name": "[concat(parameters('FunctionAppName'),'/web')]",
+            "location": "[resourceGroup().location]",
+            "tags": {
+              "Application Name":"[parameters('TagApplicationName')]",
+              "CostCenter": "[parameters('TagCostCenter')]",
+              "Environment": "[parameters('EnvironmentName')]",
+              "Owner": "[parameters('TagOwner')]",
+              "Supported by": "[parameters('TagSupportedby')]"
+            },
+			"dependsOn": [
+                "[concat(resourceId('Microsoft.Web/sites', parameters('FunctionAppName')))]"
+            ],
+            "properties": {
+				"ipSecurityRestrictions": [
+                    {
+                        "vnetSubnetResourceId": "[concat('/subscriptions/',subscription().subscriptionId,'/resourceGroups/',parameters('VNETResourceGroupName'),'/providers/Microsoft.Network/virtualNetworks/',parameters('FunctionAppVNETname'),'/subnets/', parameters('FunctionAppSubnetName'))]",
+                        "action": "Allow",
+                        "tag": "Default",
+                        "priority": 100,
+                        "name": "[if(greater(length(parameters('FunctionAppSubnetName')), 30), substring(parameters('FunctionAppSubnetName'), 0, 30), parameters('FunctionAppSubnetName'))]"
+                    },
+                    {
+                        "vnetSubnetResourceId": "[concat('/subscriptions/',subscription().subscriptionId,'/resourceGroups/',parameters('VNETWeuResourceGroupName'),'/providers/Microsoft.Network/virtualNetworks/',parameters('VNETname'),'/subnets/', parameters('APIMInternalSubnetName'))]",
+                        "action": "Allow",
+                        "tag": "Default",
+                        "priority": 100,
+                        "name": "[if(greater(length(parameters('APIMInternalSubnetName')), 30), substring(parameters('APIMInternalSubnetName'), 0, 30), parameters('APIMInternalSubnetName'))]"
+                    },
+					{
+                        "vnetSubnetResourceId": "[concat('/subscriptions/',subscription().subscriptionId,'/resourceGroups/',parameters('VNETWeuResourceGroupName'),'/providers/Microsoft.Network/virtualNetworks/',parameters('VNETname'),'/subnets/', parameters('SupportVMSubnetName'))]",
+                        "action": "Allow",
+                        "tag": "Default",
+                        "priority": 100,
+                        "name": "[if(greater(length(parameters('SupportVMSubnetName')), 30), substring(parameters('SupportVMSubnetName'), 0, 30), parameters('SupportVMSubnetName'))]",
+                        "description": "[parameters('SupportVMSubnetName')]"
+                    },
+					{
+                        "vnetSubnetResourceId": "[concat('/subscriptions/',subscription().subscriptionId,'/resourceGroups/',parameters('VNET2ResourceGroupName'),'/providers/Microsoft.Network/virtualNetworks/',parameters('APIMInternal2VNETname'),'/subnets/', parameters('APIMInternal2SubnetName'))]",
+                        "action": "Allow",
+                        "tag": "Default",
+                        "priority": 100,
+                        "name": "[if(greater(length(parameters('APIMInternal2SubnetName')), 30), substring(parameters('APIMInternal2SubnetName'), 0, 30), parameters('APIMInternal2SubnetName'))]",
+                        "description": "[parameters('APIMInternal2SubnetName')]"
+                    },
+					{
+                        "ipAddress": "Any",
+                        "action": "Deny",
+                        "priority": 2147483647,
+                        "name": "Deny all",
+                        "description": "Deny all access"
+                    }
+				]
+			}
+		},
+        {
+            "type": "Microsoft.Web/sites",
+            "apiVersion": "2016-08-01",
+            "name": "[parameters('FunctionAppName')]",
+            "location": "[resourceGroup().location]",
+            "tags": {
+                "Application Name": "[parameters('TagApplicationName')]",
+                "CostCenter": "[parameters('TagCostCenter')]",
+                "Environment": "[parameters('EnvironmentName')]",
+                "Owner": "[parameters('TagOwner')]",
+                "Supported by": "[parameters('TagSupportedby')]"
+            },
+            "kind": "app",
+            "properties": {},
+            "resources": [
+                {
+                    "type": "config",
+                    "apiVersion": "2018-02-01",
+                    "name": "virtualNetwork",
+                    "location": "[resourceGroup().location]",
+                    "dependsOn": [
+                        "[concat('Microsoft.Web/sites/', parameters('FunctionAppName'))]"
+                    ],
+                    "properties": {
+                        "subnetResourceId": "[concat('/subscriptions/',subscription().subscriptionId,'/resourceGroups/',parameters('VNETResourceGroupName'),'/providers/Microsoft.Network/virtualNetworks/',parameters('FunctionAppVNETname'),'/subnets/', parameters('FunctionAppSubnetName'))]",
+                        "swiftSupported": true
+                    }
+                }
+            ]
+        }
+    ]
+}
